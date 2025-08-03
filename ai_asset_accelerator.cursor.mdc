@@ -1,0 +1,132 @@
+# AI Asset Accelerator App - Cursor Rules
+
+---
+# Project Requirements
+
+- **Monorepo structure**: `frontend/` and `backend/` directories at the root.
+- **Tech stack**:
+  - Frontend: React Native (Expo)
+  - Backend: Node.js with Express.js, Dockerized
+  - Database: Supabase PostgreSQL & Storage
+  - Auth: Device-based (no user accounts)
+  - Billing: RevenueCat for IAPs & subscriptions
+  - Analytics: Firebase Analytics / Amplitude / PostHog
+- **Core feature**: Image upload → GPT-4o analysis → JSON response → UI display
+- **Extensible themes**: All references to "coin" should map to a variable `scan_type`; swapable for any asset (e.g., birds, cards).
+
+---
+# App Overview
+
+- **Home screen**:
+  - Logo & headline
+  - Identify button → Scanner
+  - Past scans list + total value counter
+- **Scanner screen**:
+  - Custom camera overlay (circle focus)
+  - Shutter & identify button
+  - Gallery, Close, Flash toggle, Help icons
+- **Collections screen**:
+  - Tabs: Top Value, All Scans
+  - Cards with parsed attributes
+  - Empty state CTA: Scan now / Scan another
+- **Settings screen**:
+  - Membership (upgrade/restore)
+  - Personalization (currency, theme)
+  - General (permissions, cache, icons, haptics, dark mode)
+  - Support (help, suggestions)
+- **Onboarding** (3-page tutorial, haptic-enabled)
+- **Premium trial flow** (7‑day free, subscriptions, trial reminders)
+
+---
+# Tech Stack & APIs
+
+- **OpenAI Vision API** (GPT-4o) for image analysis
+  - Enforce JSON schema in system prompt
+  - Retry & timeout logic
+- **RevenueCat SDK** (Expo) for IAP/subscriptions
+  - Products: `free_trial_7_day`, `monthly_2_99`, `yearly_39_99`
+- **Supabase**
+  - Tables: `scans`, `collections`, `settings`
+  - Storage bucket: `scans_bucket`
+  - RLS by `device_id`
+  - Functions: `calculate_total_value`
+- **Expo Permissions API** for camera & gallery
+- **AsyncStorage/MMKV** for local caching (device_id, prefs, cache)
+- **Analytics SDK**: event tracking as per analytics plan
+- **Deep linking**: URI schemes & Universal Links
+
+---
+# Frontend Guidelines
+
+- **File naming**: camelCase
+- **UI styling**:
+  - Glassmorphic cards
+  - 3 primary + 1–2 accent colors
+  - Dark/light mode using `Appearance` API
+  - Tailwind or Styled Components pattern encouraged
+- **State management**: React Context or Zustand
+- **Networking**:
+  - Axios/fetch wrapper with auth headers (device_id)
+  - Offline queue for scans
+- **Navigation**: React Navigation v6
+  - Bottom tab navigator (Home, Scan, Collections, Settings)
+- **Haptics**: Expo Haptics for taps & gestures
+- **Error handling UI**: Toasts, modals for network/GPT errors
+
+---
+# Backend Structure
+
+- **Express.js service**:
+  - Endpoints:
+    - `POST /scan` → upload image + trigger GPT analysis
+    - `GET /scans` → list scans by `device_id`
+    - `GET /scans/:id` → retrieve single scan data
+    - `POST /restore-purchase` → webhook from RevenueCat
+  - Middleware:
+    - RLS enforcement via `device_id`
+    - Rate limiting (per device)
+    - Request validation (JSON schema)
+- **Docker**:
+  - `Dockerfile` for production build
+  - `docker-compose.yml` for local dev (Express + Supabase emulator)
+- **CI/CD**:
+  - Railway deployment for backend
+  - Vercel/EAS for frontend
+
+---
+# Implementation Plan
+
+1. **Initialize monorepo** (`npm init -w frontend`, `npm init -w backend`)
+2. **Setup Supabase project** & create tables + storage bucket
+3. **Build backend**:
+   - Express skeleton, Dockerfile, scan endpoint
+   - Integrate OpenAI Vision API
+   - Implement RLS & rate limiting
+4. **Integrate RevenueCat** webhook & restore flow
+5. **Frontend scaffold**:
+   - Expo project, bottom tabs, styling utils
+   - AsyncStorage setup for `device_id`
+6. **Implement Home screen** + total counter function
+7. **Implement Scanner screen** + camera overlay + API call
+8. **Implement Collections screen** + tabs
+9. **Implement Settings screen** + all toggles
+10. **Onboarding flow** + haptics
+11. **Premium trial UI** + RevenueCat purchase
+12. **Analytics event tracking**
+13. **Offline queue & retries**
+14. **Deep linking support**
+15. **QA & error states**
+16. **Share/export feature** (optional)
+17. **Testing & QA** (unit, e2e)
+18. **Deploy & publish** (Railway, App Stores)
+
+---
+# Cursor Baseline Rules
+
+- Apply **Project Requirements** at repo root creation
+- Use **Frontend Guidelines** for any React Native files
+- Use **Backend Structure** for server-side files
+- Use **Tech Stack & APIs** wherever integration code is written
+- Use **Implementation Plan** to scaffold tasks
+- All code must reference `scan_type` variable for theme swaps
+- All UI labels pulled from a localized `strings` module for easy theming

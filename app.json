@@ -1,0 +1,47 @@
+{
+  "expo": {
+    "name": "AI Asset Accelerator",
+    "slug": "ai-asset-accelerator",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "scheme": "zephryx",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.zephryx.aiassetaccelerator",
+      "infoPlist": {
+        "NSCameraUsageDescription": "This app needs camera access to scan and identify assets.",
+        "NSPhotoLibraryUsageDescription": "This app needs photo library access to import images for scanning."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "package": "com.zephryx.aiassetaccelerator",
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.READ_EXTERNAL_STORAGE"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
+    },
+    "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow AI Asset Accelerator to access your camera to scan assets."
+        }
+      ]
+    ]
+  }
+} 

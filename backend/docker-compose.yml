@@ -1,0 +1,121 @@
+version: '3.8'
+
+services:
+  # Backend API service
+  backend:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    ports:
+      - "${PORT:-4000}:4000"
+    environment:
+      - NODE_ENV=development
+      - PORT=4000
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - REVENUECAT_WEBHOOK_SECRET=${REVENUECAT_WEBHOOK_SECRET}
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:8081}
+      - SCAN_TYPE=${SCAN_TYPE:-coin}
+      - SUPABASE_STORAGE_BUCKET=${SUPABASE_STORAGE_BUCKET:-scans_bucket}
+    volumes:
+      - .:/app
+      - /app/node_modules
+    depends_on:
+      - postgres
+    networks:
+      - ai-accelerator-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # PostgreSQL database (alternative to Supabase for local dev)
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: ai_accelerator
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - ai-accelerator-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # Redis for caching (optional)
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - ai-accelerator-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Supabase local development (optional)
+  supabase:
+    image: supabase/supabase
+    ports:
+      - "8000:8000"   # Supabase Studio
+      - "54321:5432"  # PostgreSQL
+      - "54322:3000"  # API Gateway
+    environment:
+      POSTGRES_PASSWORD: postgres
+      JWT_SECRET: your-jwt-secret
+      ANON_KEY: your-anon-key
+      SERVICE_ROLE_KEY: your-service-role-key
+    volumes:
+      - supabase_data:/var/lib/postgresql/data
+    networks:
+      - ai-accelerator-network
+    restart: unless-stopped
+    profiles:
+      - supabase-local
+
+  # Development tools container
+  dev-tools:
+    image: node:18-alpine
+    working_dir: /app
+    volumes:
+      - .:/app
+    command: tail -f /dev/null
+    networks:
+      - ai-accelerator-network
+    profiles:
+      - dev-tools
+
+# Named volumes
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  supabase_data:
+    driver: local
+
+# Networks
+networks:
+  ai-accelerator-network:
+    driver: bridge
+
+# Development overrides
+# Create docker-compose.override.yml for local customizations 
