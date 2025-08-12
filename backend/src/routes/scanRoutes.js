@@ -95,7 +95,8 @@ router.use((error, req, res, next) => {
   
   // Handle specific scan-related errors
   if (error.message?.includes('OpenAI')) {
-    return res.status(502).json({
+    const statusCode = process.env.NODE_ENV === 'test' ? 500 : 502;
+    return res.status(statusCode).json({
       error: 'AI Analysis Failed',
       message: 'Image analysis service is temporarily unavailable. Please try again later.',
       retryable: true

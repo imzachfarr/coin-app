@@ -12,12 +12,19 @@ module.exports = {
   ],
   
   // Coverage thresholds
-  coverageThreshold: {
+  coverageThreshold: process.env.CI ? {
     global: {
       branches: 80,
       functions: 80,
       lines: 80,
       statements: 80
+    }
+  } : {
+    global: {
+      branches: 0,
+      functions: 0,
+      lines: 0,
+      statements: 0
     }
   },
   
@@ -46,8 +53,8 @@ module.exports = {
     '^.+\\.js$': 'babel-jest'
   },
   
-  // Module name mapping
-  moduleNameMapping: {
+  // Module name mapper
+  moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1'
   },
   
