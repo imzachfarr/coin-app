@@ -6,6 +6,23 @@ ALTER TABLE IF EXISTS public.scans ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS public.settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS public.collections ENABLE ROW LEVEL SECURITY;
 
+-- Create app_configs table for admin-configurable white-label settings
+CREATE TABLE IF NOT EXISTS public.app_configs (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    brand_name TEXT DEFAULT 'AI Asset Accelerator',
+    theme_primary TEXT DEFAULT '#6C5CE7',
+    theme_accent TEXT DEFAULT '#00CEC9',
+    scan_type TEXT DEFAULT 'coin',
+    main_prompt TEXT,
+    features JSONB DEFAULT '[]', -- up to 4 feature descriptors [{key,label,type,description}]
+    env JSONB DEFAULT '{}'::jsonb, -- runtime env overrides (e.g., { openai_api_key, model, temperature })
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Index for app_configs
+CREATE INDEX IF NOT EXISTS idx_app_configs_updated_at ON public.app_configs(updated_at DESC);
+
 -- Create scans table
 CREATE TABLE IF NOT EXISTS public.scans (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,

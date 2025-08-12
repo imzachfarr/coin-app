@@ -288,6 +288,29 @@ module.exports = {
   scansService,
   settingsService,
   collectionsService,
+  // New admin-config service
+  appConfigService: {
+    getLatest: async () => {
+      const { data, error } = await supabase
+        .from('app_configs')
+        .select('*')
+        .order('updated_at', { ascending: false })
+        .limit(1)
+        .single();
+      if (error && error.code !== 'PGRST116') throw error;
+      return data || null;
+    },
+    upsert: async (config) => {
+      // Keep only one row by inserting a new row and optionally cleaning old ones
+      const { data, error } = await supabase
+        .from('app_configs')
+        .insert({ ...config, updated_at: new Date().toISOString() })
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    }
+  },
   storageService,
   healthCheck,
   withDeviceId

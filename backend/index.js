@@ -11,6 +11,7 @@ const { errorHandler } = require('./src/middleware/errorHandler');
 // Import routes
 const scanRoutes = require('./src/routes/scanRoutes');
 const purchaseRoutes = require('./src/routes/purchaseRoutes');
+const adminRoutes = require('./src/routes/adminRoutes');
 
 const app = express();
 
@@ -61,6 +62,7 @@ app.get('/health', (req, res) => {
 // API Routes
 app.use('/api/scan', scanRoutes);
 app.use('/api/purchase', purchaseRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Root endpoint
 app.get('/', (req, res) => {

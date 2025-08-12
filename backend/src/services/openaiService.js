@@ -1,15 +1,13 @@
 const { OpenAI } = require('openai');
 
-// Validate API key
-if (!process.env.OPENAI_API_KEY) {
-  throw new Error('OPENAI_API_KEY environment variable is required');
+// Helper to construct a client on demand (supports runtime override)
+function getOpenAIClient(apiKey) {
+  const effectiveKey = apiKey || process.env.OPENAI_API_KEY;
+  if (!effectiveKey) {
+    throw new Error('OPENAI_API_KEY is not configured. Set env or provide override apiKey.');
+  }
+  return new OpenAI({ apiKey: effectiveKey, timeout: 60000 });
 }
-
-// Initialize OpenAI client
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-  timeout: 60000, // 60 second timeout
-});
 
 // Scan type configurations with specific prompts and schemas
 const SCAN_CONFIGS = {
@@ -182,16 +180,41 @@ const SCAN_CONFIGS = {
  * @param {number} maxRetries - Maximum number of retry attempts
  * @returns {Promise<Object>} Analysis results
  */
-async function analyzeImage(imageUrl, scanType = 'coin', maxRetries = 3) {
+async function analyzeImage(imageUrl, scanType = 'coin', maxRetries = 3, overrides = {}) {
+  const client = getOpenAIClient(overrides.apiKey);
   const config = SCAN_CONFIGS[scanType.toLowerCase()];
   
   if (!config) {
     throw new Error(`Unsupported scan type: ${scanType}. Supported types: ${Object.keys(SCAN_CONFIGS).join(', ')}`);
   }
 
-  const systemPrompt = `${config.prompt}
+  // Allow runtime overrides from admin config (prompt and up to 4 features schema)
+  const overridePrompt = overrides.main_prompt || overrides.prompt;
+  const overrideFeatures = Array.isArray(overrides.features) ? overrides.features.slice(0, 4) : null;
 
-${JSON.stringify(config.schema, null, 2)}
+  let schema = config.schema;
+  if (overrideFeatures && overrideFeatures.length > 0) {
+    // Build a schema with a generic attributes block comprised of admin-defined features
+    const featureProps = {};
+    overrideFeatures.forEach((f) => {
+      if (f && f.key) {
+        featureProps[f.key] = { type: f.type || 'string', description: f.description || f.label || f.key };
+      }
+    });
+    schema = {
+      type: 'object',
+      required: ['valueEstimate', 'attributes'],
+      properties: {
+        valueEstimate: { type: 'number', description: 'Primary numeric score/value for the scanned item' },
+        confidence: { type: 'number', minimum: 0, maximum: 1 },
+        attributes: { type: 'object', properties: featureProps }
+      }
+    };
+  }
+
+  const systemPrompt = `${overridePrompt || config.prompt}
+
+${JSON.stringify(schema, null, 2)}
 
 CRITICAL: Respond with ONLY valid JSON. No markdown, no explanations, no additional text.`;
 
@@ -199,8 +222,8 @@ CRITICAL: Respond with ONLY valid JSON. No markdown, no explanations, no additio
     try {
       console.log(`🤖 Analyzing ${scanType} image (attempt ${attempt}/${maxRetries}): ${imageUrl}`);
       
-      const response = await openai.chat.completions.create({
-        model: 'gpt-4o',
+      const response = await client.chat.completions.create({
+        model: overrides.model || 'gpt-4o',
         messages: [
           {
             role: 'system',
@@ -223,8 +246,8 @@ CRITICAL: Respond with ONLY valid JSON. No markdown, no explanations, no additio
               ]
             }
         ],
-        max_tokens: 1000,
-        temperature: 0.1, // Low temperature for consistent results
+        max_tokens: 1200,
+        temperature: typeof overrides.temperature === 'number' ? overrides.temperature : 0.1,
       });
 
       const content = response.choices[0]?.message?.content;
@@ -272,7 +295,7 @@ CRITICAL: Respond with ONLY valid JSON. No markdown, no explanations, no additio
       // Add metadata
       parsedResult.scanType = scanType;
       parsedResult.analyzedAt = new Date().toISOString();
-      parsedResult.model = 'gpt-4o';
+      parsedResult.model = overrides.model || 'gpt-4o';
 
       console.log(`✅ Successfully analyzed ${scanType} image with confidence ${parsedResult.confidence}`);
       

@@ -1,4 +1,4 @@
-const { scansService, storageService } = require('../services/supabaseService');
+const { scansService, storageService, appConfigService } = require('../services/supabaseService');
 const { analyzeImage, validateImageUrl } = require('../services/openaiService');
 const { asyncHandler } = require('../middleware/errorHandler');
 const sharp = require('sharp');
@@ -95,9 +95,25 @@ const handleScan = asyncHandler(async (req, res) => {
     }
 
     console.log(`🤖 Starting AI analysis for ${scanType}...`);
+    // Load admin overrides for prompt/features (if any)
+    let overrides = {};
+    try {
+      const cfg = await appConfigService.getLatest();
+      if (cfg) {
+        overrides = {
+          main_prompt: cfg.main_prompt,
+          features: cfg.features,
+          apiKey: cfg.env?.openai_api_key,
+          model: cfg.env?.model,
+          temperature: cfg.env?.temperature,
+        };
+      }
+    } catch (cfgErr) {
+      console.warn('Admin config not available:', cfgErr.message);
+    }
     
     // Analyze image with OpenAI Vision
-    const analysis = await analyzeImage(imageUrl, scanType);
+    const analysis = await analyzeImage(imageUrl, scanType, 3, overrides);
     
     console.log(`💾 Saving scan results to database...`);
     
